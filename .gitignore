@@ -286,4 +286,7 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 
+# DocFX publish script
+/docs_publish
+
 !*.dll.meta

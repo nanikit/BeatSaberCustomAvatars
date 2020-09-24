@@ -1,0 +1,40 @@
+name: Deploy Documentation
+
+on: push
+
+jobs:
+  deploy-docs:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    
+    - name: Install DocFX
+      run: choco install docfx
+
+    - name: Checkout GitHub Pages branch
+      uses: actions/checkout@v2
+      with:
+        ref: 'gh-pages'
+        path: Documentation\_site
+    
+    - name: Run DocFX
+      run: docfx Documentation/docfx.json
+    
+    - name: Push to GitHub Pages
+      run: |
+        $hash = (git log -n 1 --pretty="%h").Trim()
+        $name = (git log -n 1 --pretty="%an").Trim()
+        $email = (git log -n 1 --pretty="%ae").Trim()
+
+        cd Documentation\_site
+
+        echo "Committing as $name <$email>"
+
+        git config user.name $name
+        git config user.email $email
+
+        git add .
+        git commit --message ":books: Update documentation @ $hash"
+        git push
