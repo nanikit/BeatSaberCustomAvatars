@@ -1,13 +1,6 @@
 name: build
 
-on:
-  push:
-    branches:
-    - main
-    - develop
-    tags:
-    - '*'
-  pull_request:
+on: ['push', 'pull_request']
 
 jobs:
   build:
@@ -22,7 +15,7 @@ jobs:
         dotnet-version: 3.1.x
 
     - name: Set manifest version
-      run: ./bsipa_version_hash.ps1 "Source\CustomAvatar\manifest.json" "Source\CustomAvatar\Properties\AssemblyInfo.cs"
+      run: .\Scripts\bsipa_version_hash.ps1 "Source\CustomAvatar\manifest.json" "Source\CustomAvatar\Properties\AssemblyInfo.cs"
 
     - name: Fetch Beat Saber Bindings
       uses: actions/checkout@v2
@@ -59,8 +52,14 @@ jobs:
         name: BeatSaberCustomAvatars-${{ env.ZIP_VERSION }}-Editor
         path: Source\CustomAvatar-Editor\bin\Release\netstandard2.0\publish\CustomAvatar.dll
     
-    - name: Upload Unity Project
+    - name: Create Unity Package
+      run: |
+        Set-PSRepository PSGallery -InstallationPolicy Trusted
+        Install-Module powershell-yaml
+        .\Scripts\unitypackage.ps1 -WorkingDirectory ".\Unity\BeatSaberCustomAvatars" -Paths "Assets\*.meta" -Output "BeatSaberCustomAvatars-${{ env.ZIP_VERSION }}.unitypackage"
+
+    - name: Upload Unity Package
       uses: actions/upload-artifact@v2.2.0
       with:
-        name: BeatSaberCustomAvatars-${{ env.ZIP_VERSION }}-UnityProject
-        path: Unity
+        name: BeatSaberCustomAvatars-${{ env.ZIP_VERSION }}-UnityPackage
+        path: BeatSaberCustomAvatars-${{ env.ZIP_VERSION }}.unitypackage
