@@ -40,9 +40,7 @@ namespace CustomAvatar.Avatar
             _container = container;
             _logger = logger;
 
-            RegisterComponent<AvatarTracking>();
             RegisterComponent<AvatarIK>(ShouldAddIK);
-            RegisterComponent<AvatarFingerTracking>(ShouldAddFingerTracking);
         }
 
         public void RegisterComponent<T>(Func<AvatarPrefab, bool> condition = null) where T : MonoBehaviour
@@ -62,18 +60,12 @@ namespace CustomAvatar.Avatar
             _componentsToAdd.RemoveAll(vt => vt.type == typeof(T));
         }
 
-        [Obsolete]
-        public SpawnedAvatar SpawnAvatar(LoadedAvatar avatar, IAvatarInput input, Transform parent = null)
-        {
-            return SpawnAvatar(avatar.prefab.GetComponent<AvatarPrefab>(), input, parent);
-        }
-
         /// <summary>
-        /// Spawn a <see cref="LoadedAvatar"/>.
+        /// Spawn an <see cref="AvatarPrefab"/>.
         /// </summary>
-        /// <param name="avatar">The <see cref="LoadedAvatar"/> to spawn</param>
-        /// <param name="input">The <see cref="IAvatarInput"/> to use</param>
-        /// <param name="parent">The container in which to spawn the avatar (optional)</param>
+        /// <param name="avatar">The <see cref="AvatarPrefab"/> to spawn.</param>
+        /// <param name="input">The <see cref="IAvatarInput"/> to use.</param>
+        /// <param name="parent">The container in which to spawn the avatar (optional).</param>
         /// <returns><see cref="SpawnedAvatar"/></returns>
         public SpawnedAvatar SpawnAvatar(AvatarPrefab avatar, IAvatarInput input, Transform parent = null)
         {
@@ -89,14 +81,14 @@ namespace CustomAvatar.Avatar
                 _logger.Info($"Spawning avatar '{avatar.descriptor.name}'");
             }
 
-            var subContainer = new DiContainer(_container);
+            DiContainer subContainer = new(_container);
 
+            subContainer.Bind<IAvatarInput>().FromInstance(input);
             GameObject avatarInstance = Object.Instantiate(avatar, parent, false).gameObject;
-            Object.Destroy(avatarInstance.GetComponent<AvatarPrefab>());
-            subContainer.QueueForInject(avatarInstance);
+            Object.DestroyImmediate(avatarInstance.GetComponent<AvatarPrefab>());
+            subContainer.InjectGameObject(avatarInstance);
 
             subContainer.Bind<AvatarPrefab>().FromInstance(avatar);
-            subContainer.Bind<IAvatarInput>().FromInstance(input);
 
             SpawnedAvatar spawnedAvatar = subContainer.InstantiateComponent<SpawnedAvatar>(avatarInstance);
 
@@ -117,11 +109,6 @@ namespace CustomAvatar.Avatar
         private bool ShouldAddIK(AvatarPrefab avatar)
         {
             return avatar.isIKAvatar;
-        }
-
-        private bool ShouldAddFingerTracking(AvatarPrefab avatar)
-        {
-            return avatar.supportsFingerTracking;
         }
     }
 }

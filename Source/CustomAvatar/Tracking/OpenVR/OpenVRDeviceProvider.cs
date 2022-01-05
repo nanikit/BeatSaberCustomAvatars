@@ -50,7 +50,7 @@ namespace CustomAvatar.Tracking.OpenVR
                 OpenVRDevice device = _devices[i];
                 TrackedDevicePose_t pose = _poses[i];
 
-                DeviceUse use = DeviceUse.Unknown;
+                TrackedNodeType use = TrackedNodeType.Unknown;
 
                 string id = device.id;
                 bool isConnected = device.isConnected;
@@ -125,18 +125,18 @@ namespace CustomAvatar.Tracking.OpenVR
                 switch (deviceClass)
                 {
                     case ETrackedDeviceClass.HMD:
-                        use = DeviceUse.Head;
+                        use = TrackedNodeType.Head;
                         break;
 
                     case ETrackedDeviceClass.Controller:
                         switch (controllerRole)
                         {
                             case ETrackedControllerRole.LeftHand:
-                                use = DeviceUse.LeftHand;
+                                use = TrackedNodeType.LeftHand;
                                 break;
 
                             case ETrackedControllerRole.RightHand:
-                                use = DeviceUse.RightHand;
+                                use = TrackedNodeType.RightHand;
                                 break;
                         }
 
@@ -146,15 +146,15 @@ namespace CustomAvatar.Tracking.OpenVR
                         switch (role)
                         {
                             case "vive_tracker_waist":
-                                use = DeviceUse.Waist;
+                                use = TrackedNodeType.Waist;
                                 break;
 
                             case "vive_tracker_left_foot":
-                                use = DeviceUse.LeftFoot;
+                                use = TrackedNodeType.LeftFoot;
                                 break;
 
                             case "vive_tracker_right_foot":
-                                use = DeviceUse.RightFoot;
+                                use = TrackedNodeType.RightFoot;
                                 break;
                         }
 
@@ -185,7 +185,7 @@ namespace CustomAvatar.Tracking.OpenVR
                     _openVRFacade.GetPositionAndRotation(pose.mDeviceToAbsoluteTracking, out position, out rotation);
 
                     // Driver4VR rotation correction
-                    if (role.StartsWith("d4vr_tracker_") && (use == DeviceUse.LeftFoot || use == DeviceUse.RightFoot))
+                    if (role.StartsWith("d4vr_tracker_") && (use == TrackedNodeType.LeftFoot || use == TrackedNodeType.RightFoot))
                     {
                         rotation *= Quaternion.Euler(-90, 180, 0);
                     }
@@ -193,12 +193,12 @@ namespace CustomAvatar.Tracking.OpenVR
                     // KinectToVR rotation correction
                     if (role == "kinect_device")
                     {
-                        if (use == DeviceUse.Waist)
+                        if (use == TrackedNodeType.Waist)
                         {
                             rotation *= Quaternion.Euler(-90, 180, 0);
                         }
 
-                        if (use == DeviceUse.LeftFoot || use == DeviceUse.RightFoot)
+                        if (use is TrackedNodeType.LeftFoot or TrackedNodeType.RightFoot)
                         {
                             rotation *= Quaternion.Euler(0, 180, 0);
                         }

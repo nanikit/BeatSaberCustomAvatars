@@ -127,6 +127,7 @@ namespace CustomAvatar
         #region Spine
 
         [Tooltip("The head target.")]
+        [HideInInspector]
         public Transform solver_spine_headTarget;
 
         [Tooltip("Positional weight of the head target.")]
@@ -136,6 +137,7 @@ namespace CustomAvatar
         [Range(0f, 1f)] public float solver_spine_rotationWeight = 1f;
 
         [Tooltip("The pelvis target, useful with seated rigs.")]
+        [HideInInspector]
         public Transform solver_spine_pelvisTarget;
 
         [Tooltip("Positional weight of the pelvis target.")]
@@ -185,6 +187,7 @@ namespace CustomAvatar
         #region Left Arm
 
         [Tooltip("The hand target")]
+        [HideInInspector]
         public Transform solver_leftArm_target;
 
         [Tooltip("The elbow will be bent towards this Transform if 'Bend Goal Weight' > 0.")]
@@ -229,6 +232,7 @@ namespace CustomAvatar
         #region Right Arm
 
         [Tooltip("The hand target")]
+        [HideInInspector]
         public Transform solver_rightArm_target;
 
         [Tooltip("The elbow will be bent towards this Transform if 'Bend Goal Weight' > 0.")]
@@ -273,6 +277,7 @@ namespace CustomAvatar
         #region Left Leg
 
         [Tooltip("The toe/foot target.")]
+        [HideInInspector]
         public Transform solver_leftLeg_target;
 
         [Tooltip("The knee will be bent towards this Transform if 'Bend Goal Weight' > 0.")]
@@ -305,6 +310,7 @@ namespace CustomAvatar
         #region Right Leg
 
         [Tooltip("The toe/foot target.")]
+        [HideInInspector]
         public Transform solver_rightLeg_target;
 
         [Tooltip("The knee will be bent towards this Transform if 'Bend Goal Weight' > 0.")]

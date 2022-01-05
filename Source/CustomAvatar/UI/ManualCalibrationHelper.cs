@@ -32,8 +32,7 @@ namespace CustomAvatar.UI
 
         private ILogger<ManualCalibrationHelper> _logger;
         private ShaderLoader _shaderLoader;
-        private VRPlayerInputInternal _playerInput;
-        private PlayerAvatarManager _avatarManager;
+        private PlayerSpaceController _playerSpace;
 
         private Material _sphereMaterial;
         private Material _rodMaterial;
@@ -46,21 +45,20 @@ namespace CustomAvatar.UI
         private GameObject _leftFootRod;
         private GameObject _rightFootRod;
 
-        internal void Awake()
+        private void Awake()
         {
             enabled = false;
         }
 
         [Inject]
-        internal void Construct(ILogger<ManualCalibrationHelper> logger, ShaderLoader shaderLoader, VRPlayerInputInternal playerInput, PlayerAvatarManager avatarManager)
+        private void Construct(ILogger<ManualCalibrationHelper> logger, ShaderLoader shaderLoader, PlayerSpaceController playerSpace)
         {
             _logger = logger;
             _shaderLoader = shaderLoader;
-            _playerInput = playerInput;
-            _avatarManager = avatarManager;
+            _playerSpace = playerSpace;
         }
 
-        internal void Start()
+        private void Start()
         {
             if (_shaderLoader.unlitShader)
             {
@@ -81,18 +79,18 @@ namespace CustomAvatar.UI
             }
             else
             {
-                _logger.Error("Unlit shader not loaded; manual calibration points may not be visible");
+                _logger.Error("Unlit shader not loaded; not spawning calibration indicators");
             }
         }
 
-        internal void Update()
+        private void Update()
         {
-            UpdateTrackingMarker(_waistSphere, _waistRod, _avatarManager.currentlySpawnedAvatar.pelvis, DeviceUse.Waist);
-            UpdateTrackingMarker(_leftFootSphere, _leftFootRod, _avatarManager.currentlySpawnedAvatar.leftLeg, DeviceUse.LeftFoot);
-            UpdateTrackingMarker(_rightFootSphere, _rightFootRod, _avatarManager.currentlySpawnedAvatar.rightLeg, DeviceUse.RightFoot);
+            UpdateTrackingMarker(_waistSphere, _waistRod, _playerSpace.waist, _playerSpace.waistReference);
+            UpdateTrackingMarker(_leftFootSphere, _leftFootRod, _playerSpace.leftFoot, _playerSpace.leftFootReference);
+            UpdateTrackingMarker(_rightFootSphere, _rightFootRod, _playerSpace.rightFoot, _playerSpace.rightFootReference);
         }
 
-        internal void OnDisable()
+        private void OnDisable()
         {
             if (!_loaded) return;
 
@@ -107,7 +105,7 @@ namespace CustomAvatar.UI
 
         private GameObject CreateCalibrationSphere()
         {
-            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
 
             sphere.layer = AvatarLayers.kAlwaysVisible;
             sphere.transform.localScale = Vector3.one * 0.1f;
@@ -118,7 +116,7 @@ namespace CustomAvatar.UI
 
         private GameObject CreateRod()
         {
-            var rod = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            GameObject rod = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 
             rod.transform.localScale = new Vector3(0.01f, 0.5f, 0.01f);
             rod.GetComponent<Renderer>().material = _rodMaterial;
@@ -126,17 +124,20 @@ namespace CustomAvatar.UI
             return rod;
         }
 
-        private void UpdateTrackingMarker(GameObject sphere, GameObject rod, Transform avatarTarget, DeviceUse deviceUse)
+        private void UpdateTrackingMarker(GameObject sphere, GameObject rod, AvatarNode tracker, Transform avatarReference)
         {
-            if (_playerInput.TryGetUncalibratedPoseForAvatar(deviceUse, _avatarManager.currentlySpawnedAvatar, out Pose pose))
+            if (tracker.isTracking)
             {
-                sphere.SetActive(true);
-                sphere.transform.SetPositionAndRotation(pose.position, pose.rotation);
+                Vector3 position = tracker.transform.position;
+                Quaternion rotation = tracker.transform.rotation;
 
-                rod.SetActive(true);
-                Vector3 trackerToPoint = pose.position - avatarTarget.position;
-                Vector3 pivot = (pose.position + avatarTarget.position) * 0.5f;
+                sphere.SetActive(true);
+                sphere.transform.SetPositionAndRotation(position, rotation);
+
+                Vector3 trackerToPoint = position - avatarReference.position;
+                Vector3 pivot = (position + avatarReference.position) * 0.5f;
                 Vector3 localScale = rod.transform.localScale;
+                rod.SetActive(true);
                 rod.transform.SetPositionAndRotation(pivot, Quaternion.LookRotation(trackerToPoint) * Quaternion.Euler(90, 0, 0));
                 rod.transform.localScale = new Vector3(localScale.x, trackerToPoint.magnitude * 0.5f, localScale.z);
             }

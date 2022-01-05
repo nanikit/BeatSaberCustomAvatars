@@ -19,6 +19,7 @@ using CustomAvatar.Avatar;
 using CustomAvatar.Configuration;
 using CustomAvatar.Logging;
 using CustomAvatar.Rendering;
+using CustomAvatar.Tracking;
 using CustomAvatar.Utilities;
 using UnityEngine;
 using Zenject;
@@ -78,16 +79,17 @@ namespace CustomAvatar.Player
             }
 
             // ScoreSaber replay spectator camera
-            var spectatorParent = GameObject.Find("/SpectatorParent");
+            GameObject spectatorParent = GameObject.Find("/SpectatorParent");
 
             if (spectatorParent)
             {
                 // "SpectatorParent" has position room adjust applied but not rotation
-                var avatarParent = new GameObject("AvatarParent");
-                Transform avatarParentTransform = avatarParent.transform;
+                GameObject playerSpace = new("PlayerSpace");
+                Transform avatarParentTransform = playerSpace.transform;
                 avatarParentTransform.localRotation = _beatSaberUtilities.roomRotation;
                 avatarParentTransform.SetParent(spectatorParent.transform, false);
-                _container.InstantiateComponent<AvatarCenterAdjust>(avatarParent);
+                TransformVariableSetter transformVariableSetter = _container.InstantiateComponent<TransformVariableSetter>(playerSpace);
+                transformVariableSetter.transformVariable = _container.Resolve<TransformVariableManager>().origin;
 
                 Camera spectatorCamera = spectatorParent.GetComponentInChildren<Camera>();
 

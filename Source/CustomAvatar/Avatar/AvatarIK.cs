@@ -41,24 +41,13 @@ namespace CustomAvatar.Avatar
             }
         }
 
-        [Obsolete]
-        public bool isCalibrationModeEnabled
-        {
-            get => _isCalibrationModeEnabled;
-            set
-            {
-                _isCalibrationModeEnabled = value;
-                UpdateSolverTargets();
-            }
-        }
-
         private VRIK _vrik;
         private VRIKManager _vrikManager;
 
         private bool _fixTransforms;
 
-        private readonly List<BeatSaberDynamicBone::DynamicBone> _dynamicBones = new List<BeatSaberDynamicBone::DynamicBone>();
-        private readonly List<TwistRelaxer> _twistRelaxers = new List<TwistRelaxer>();
+        private readonly List<BeatSaberDynamicBone::DynamicBone> _dynamicBones = new();
+        private readonly List<TwistRelaxer> _twistRelaxers = new();
 
         // create delegates for dynamic bones private methods (more efficient than continuously calling Invoke)
         private static readonly Action<BeatSaberDynamicBone::DynamicBone> kDynamicBoneOnEnableDelegate = MethodAccessor<BeatSaberDynamicBone::DynamicBone, Action<BeatSaberDynamicBone::DynamicBone>>.GetDelegate("OnEnable");
@@ -66,14 +55,13 @@ namespace CustomAvatar.Avatar
         private static readonly Action<BeatSaberDynamicBone::DynamicBone> kDynamicBonePreUpdateDelegate = MethodAccessor<BeatSaberDynamicBone::DynamicBone, Action<BeatSaberDynamicBone::DynamicBone>>.GetDelegate("PreUpdate");
         private static readonly Action<BeatSaberDynamicBone::DynamicBone> kDynamicBoneLateUpdateDelegate = MethodAccessor<BeatSaberDynamicBone::DynamicBone, Action<BeatSaberDynamicBone::DynamicBone>>.GetDelegate("LateUpdate");
 
-        private Action<TwistRelaxer> _twistRelaxerStartDelegate;
+        private static readonly Action<TwistRelaxer> kTwistRelaxerStartDelegate = MethodAccessor<TwistRelaxer, Action<TwistRelaxer>>.GetDelegate("Start");
 
         private IAvatarInput _input;
         private SpawnedAvatar _avatar;
         private ILogger<AvatarIK> _logger;
         private IKHelper _ikHelper;
 
-        private bool _isCalibrationModeEnabled = false;
         private bool _isLocomotionEnabled = false;
         private Pose _previousParentPose;
 
@@ -82,8 +70,6 @@ namespace CustomAvatar.Avatar
 
         private void Awake()
         {
-            _twistRelaxerStartDelegate = MethodAccessor<TwistRelaxer, Action<TwistRelaxer>>.GetDelegate("Start");
-
             foreach (TwistRelaxer twistRelaxer in GetComponentsInChildren<TwistRelaxer>())
             {
                 if (!twistRelaxer.enabled) continue;
@@ -118,23 +104,20 @@ namespace CustomAvatar.Avatar
         {
             _vrikManager = GetComponentInChildren<VRIKManager>();
 
-            _vrik = _ikHelper.InitializeVRIK(_vrikManager, transform);
+            _vrik = _ikHelper.InitializeVRIK(_vrikManager, gameObject);
 
             _fixTransforms = _vrikManager.fixTransforms;
             _vrik.fixTransforms = false; // FixTransforms is manually called in Update
-
-            if (_vrikManager.solver_spine_maintainPelvisPosition > 0 && !_input.allowMaintainPelvisPosition)
-            {
-                _logger.Warning("solver.spine.maintainPelvisPosition > 0 is not recommended because it can cause strange pelvis rotation issues. To allow maintainPelvisPosition > 0, please set allowMaintainPelvisPosition to true for your avatar in the configuration file.");
-                _vrik.solver.spine.maintainPelvisPosition = 0;
-            }
 
             _input.inputChanged += OnInputChanged;
 
             UpdateLocomotion();
             UpdateSolverTargets();
 
-            foreach (TwistRelaxer twistRelaxer in _twistRelaxers) _twistRelaxerStartDelegate(twistRelaxer);
+            foreach (TwistRelaxer twistRelaxer in _twistRelaxers)
+            {
+                kTwistRelaxerStartDelegate(twistRelaxer);
+            }
 
             foreach (BeatSaberDynamicBone::DynamicBone dynamicBone in _dynamicBones)
             {
@@ -196,6 +179,7 @@ namespace CustomAvatar.Avatar
 
             if (!parent) return;
 
+            // TODO: this is slightly ridiculous, try to find a better way
             Vector3 deltaPosition = parent.position - _previousParentPose.position;
             Quaternion deltaRotation = parent.rotation * Quaternion.Inverse(_previousParentPose.rotation);
 
@@ -222,17 +206,52 @@ namespace CustomAvatar.Avatar
 
         private void UpdateSolverTargets()
         {
-            if (!_vrik || !_vrikManager) return;
+            if (!_vrik || !_vrikManager || _input == null) return;
 
             _logger.Info("Updating solver targets");
 
-            _vrik.solver.spine.headTarget = _vrikManager.solver_spine_headTarget;
-            _vrik.solver.leftArm.target = _vrikManager.solver_leftArm_target;
-            _vrik.solver.rightArm.target = _vrikManager.solver_rightArm_target;
-
-            if (_input.TryGetPose(DeviceUse.LeftFoot, out _) || _isCalibrationModeEnabled)
+            if (_input.TryGetTransform(TrackedNodeType.Head, out Transform head))
             {
-                _vrik.solver.leftLeg.target = _vrikManager.solver_leftLeg_target;
+                _vrik.solver.spine.headTarget = head;
+                _vrik.solver.spine.positionWeight = _vrikManager.solver_spine_positionWeight;
+                _vrik.solver.spine.rotationWeight = _vrikManager.solver_spine_rotationWeight;
+            }
+            else
+            {
+                _vrik.solver.spine.headTarget = null;
+                _vrik.solver.spine.positionWeight = 0;
+                _vrik.solver.spine.rotationWeight = 0;
+            }
+
+            if (_input.TryGetTransform(TrackedNodeType.LeftHand, out Transform leftHand))
+            {
+                _vrik.solver.leftArm.target = leftHand;
+                _vrik.solver.leftArm.positionWeight = _vrikManager.solver_leftArm_positionWeight;
+                _vrik.solver.leftArm.rotationWeight = _vrikManager.solver_leftArm_rotationWeight;
+            }
+            else
+            {
+                _vrik.solver.leftArm.target = null;
+                _vrik.solver.leftArm.positionWeight = 0;
+                _vrik.solver.leftArm.rotationWeight = 0;
+            }
+
+            if (_input.TryGetTransform(TrackedNodeType.RightHand, out Transform rightHand))
+            {
+                _vrik.solver.rightArm.target = rightHand;
+                _vrik.solver.rightArm.positionWeight = _vrikManager.solver_rightArm_positionWeight;
+                _vrik.solver.rightArm.rotationWeight = _vrikManager.solver_rightArm_rotationWeight;
+            }
+            else
+            {
+                _vrik.solver.rightArm.target = null;
+                _vrik.solver.rightArm.positionWeight = 0;
+                _vrik.solver.rightArm.rotationWeight = 0;
+            }
+
+            if (_input.TryGetTransform(TrackedNodeType.LeftFoot, out Transform leftFoot))
+            {
+                _vrik.solver.leftLeg.target = leftFoot;
                 _vrik.solver.leftLeg.positionWeight = _vrikManager.solver_leftLeg_positionWeight;
                 _vrik.solver.leftLeg.rotationWeight = _vrikManager.solver_leftLeg_rotationWeight;
             }
@@ -243,9 +262,9 @@ namespace CustomAvatar.Avatar
                 _vrik.solver.leftLeg.rotationWeight = 0;
             }
 
-            if (_input.TryGetPose(DeviceUse.RightFoot, out _) || _isCalibrationModeEnabled)
+            if (_input.TryGetTransform(TrackedNodeType.RightFoot, out Transform rightFoot))
             {
-                _vrik.solver.rightLeg.target = _vrikManager.solver_rightLeg_target;
+                _vrik.solver.rightLeg.target = rightFoot;
                 _vrik.solver.rightLeg.positionWeight = _vrikManager.solver_rightLeg_positionWeight;
                 _vrik.solver.rightLeg.rotationWeight = _vrikManager.solver_rightLeg_rotationWeight;
             }
@@ -256,11 +275,12 @@ namespace CustomAvatar.Avatar
                 _vrik.solver.rightLeg.rotationWeight = 0;
             }
 
-            if (_input.TryGetPose(DeviceUse.Waist, out _) || _isCalibrationModeEnabled)
+            if (_input.TryGetTransform(TrackedNodeType.Waist, out Transform waist))
             {
-                _vrik.solver.spine.pelvisTarget = _vrikManager.solver_spine_pelvisTarget;
+                _vrik.solver.spine.pelvisTarget = waist;
                 _vrik.solver.spine.pelvisPositionWeight = _vrikManager.solver_spine_pelvisPositionWeight;
                 _vrik.solver.spine.pelvisRotationWeight = _vrikManager.solver_spine_pelvisRotationWeight;
+                _vrik.solver.spine.maintainPelvisPosition = 0;
                 _vrik.solver.plantFeet = false;
             }
             else
@@ -268,6 +288,7 @@ namespace CustomAvatar.Avatar
                 _vrik.solver.spine.pelvisTarget = null;
                 _vrik.solver.spine.pelvisPositionWeight = 0;
                 _vrik.solver.spine.pelvisRotationWeight = 0;
+                _vrik.solver.spine.maintainPelvisPosition = _vrikManager.solver_spine_maintainPelvisPosition;
                 _vrik.solver.plantFeet = _vrikManager.solver_plantFeet;
             }
         }

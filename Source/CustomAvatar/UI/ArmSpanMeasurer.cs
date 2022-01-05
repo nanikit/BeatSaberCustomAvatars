@@ -14,7 +14,6 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using CustomAvatar.Player;
 using CustomAvatar.Tracking;
 using System;
 using UnityEngine;
@@ -30,7 +29,7 @@ namespace CustomAvatar.UI
         public event Action<float> updated;
         public event Action<float> completed;
 
-        private IAvatarInput _playerInput;
+        private DeviceManager _deviceManager;
 
         private float _lastUpdateTime;
         private float _lastMeasuredArmSpan;
@@ -38,15 +37,15 @@ namespace CustomAvatar.UI
         public bool isMeasuring { get; private set; }
 
         [Inject]
-        internal void Construct(VRPlayerInput playerInput)
+        internal void Construct(DeviceManager deviceManager)
         {
-            _playerInput = playerInput;
+            _deviceManager = deviceManager;
         }
 
         public void MeasureArmSpan()
         {
             if (isMeasuring) return;
-            if (!_playerInput.TryGetPose(DeviceUse.LeftHand, out Pose _) || !_playerInput.TryGetPose(DeviceUse.RightHand, out Pose _)) return;
+            if (!_deviceManager.TryGetDeviceState(TrackedNodeType.LeftHand, out TrackedDevice _) || !_deviceManager.TryGetDeviceState(TrackedNodeType.RightHand, out TrackedDevice _)) return;
 
             isMeasuring = true;
             _lastMeasuredArmSpan = 0;
@@ -66,7 +65,7 @@ namespace CustomAvatar.UI
 
         private void ScanArmSpan()
         {
-            if (Time.timeSinceLevelLoad - _lastUpdateTime < kStableMeasurementTimeout && _playerInput.TryGetPose(DeviceUse.LeftHand, out Pose leftHand) && _playerInput.TryGetPose(DeviceUse.RightHand, out Pose rightHand))
+            if (Time.timeSinceLevelLoad - _lastUpdateTime < kStableMeasurementTimeout && _deviceManager.TryGetDeviceState(TrackedNodeType.LeftHand, out TrackedDevice leftHand) && _deviceManager.TryGetDeviceState(TrackedNodeType.RightHand, out TrackedDevice rightHand))
             {
                 float armSpan = Vector3.Distance(leftHand.position, rightHand.position);
 

@@ -25,12 +25,12 @@ namespace CustomAvatar.Lighting
 {
     internal class DynamicDirectionalLightingController : MonoBehaviour
     {
-        private static readonly Vector3 kOrigin = new Vector3(0, 1, 0);
+        private static readonly Vector3 kOrigin = new(0, 1, 0);
 
         private ILogger<DynamicDirectionalLightingController> _logger;
         private Settings _settings;
 
-        private List<(DirectionalLight, Light)> _directionalLights;
+        private readonly List<(DirectionalLight, Light)> _directionalLights = new();
 
         #region Behaviour Lifecycle
 
@@ -64,8 +64,6 @@ namespace CustomAvatar.Lighting
 
         private void CreateLights()
         {
-            _directionalLights = new List<(DirectionalLight, Light)>();
-
             foreach (DirectionalLight directionalLight in DirectionalLight.lights)
             {
                 Light light = new GameObject($"DynamicDirectionalLight({directionalLight.name})").AddComponent<Light>();

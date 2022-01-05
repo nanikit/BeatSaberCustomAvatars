@@ -19,7 +19,6 @@ using CustomAvatar.Avatar;
 using CustomAvatar.Configuration;
 using CustomAvatar.Player;
 using CustomAvatar.Tracking;
-using UnityEngine;
 
 namespace CustomAvatar.UI
 {
@@ -32,18 +31,18 @@ namespace CustomAvatar.UI
         #endregion
 
         private readonly PlayerAvatarManager _avatarManager;
-        private readonly VRPlayerInputInternal _playerInput;
         private readonly Settings _settings;
         private readonly CalibrationData _calibrationData;
         private readonly AvatarSpecificSettingsHost _avatarSpecificSettingsHost;
+        private readonly PlayerSpaceController _playerSpace;
 
-        internal AutomaticFbtCalibrationHost(PlayerAvatarManager avatarManager, VRPlayerInputInternal playerInput, Settings settings, CalibrationData calibrationData, AvatarSpecificSettingsHost avatarSpecificSettingsHost)
+        internal AutomaticFbtCalibrationHost(PlayerAvatarManager avatarManager, Settings settings, CalibrationData calibrationData, AvatarSpecificSettingsHost avatarSpecificSettingsHost, PlayerSpaceController playerSpace)
         {
             _avatarManager = avatarManager;
-            _playerInput = playerInput;
             _settings = settings;
             _calibrationData = calibrationData;
             _avatarSpecificSettingsHost = avatarSpecificSettingsHost;
+            _playerSpace = playerSpace;
         }
 
         protected bool calibrateFullBodyTrackingOnStart
@@ -94,7 +93,7 @@ namespace CustomAvatar.UI
 
         protected bool isClearButtonEnabled => _calibrationData.automaticCalibration.isCalibrated;
 
-        private bool _areTrackersDetected => _playerInput.TryGetUncalibratedPose(DeviceUse.Waist, out Pose _) || _playerInput.TryGetUncalibratedPose(DeviceUse.LeftFoot, out Pose _) || _playerInput.TryGetUncalibratedPose(DeviceUse.RightFoot, out Pose _);
+        private bool _areTrackersDetected => true; // _playerInput.TryGetUncalibratedPose(DeviceUse.Waist, out Pose _) || _playerInput.TryGetUncalibratedPose(DeviceUse.LeftFoot, out Pose _) || _playerInput.TryGetUncalibratedPose(DeviceUse.RightFoot, out Pose _);
 
         private bool _currentAvatarSupportsAutomaticCalibration => _avatarManager.currentlySpawnedAvatar && _avatarManager.currentlySpawnedAvatar.prefab.descriptor.supportsAutomaticCalibration;
 
@@ -102,7 +101,7 @@ namespace CustomAvatar.UI
         {
             _avatarManager.avatarLoading += OnAvatarLoading;
             _avatarManager.avatarChanged += OnAvatarChanged;
-            _playerInput.inputChanged += OnInputChanged;
+            // _playerSpace.inputChanged += OnInputChanged;
 
             OnAvatarChanged(_avatarManager.currentlySpawnedAvatar);
             OnInputChanged();
@@ -112,7 +111,7 @@ namespace CustomAvatar.UI
         {
             _avatarManager.avatarLoading -= OnAvatarLoading;
             _avatarManager.avatarChanged -= OnAvatarChanged;
-            _playerInput.inputChanged -= OnInputChanged;
+            // _playerSpace.inputChanged -= OnInputChanged;
         }
 
         private void OnAvatarLoading(string filePath, string name)
@@ -138,7 +137,7 @@ namespace CustomAvatar.UI
 
         private void OnCalibrateAutoFullBodyTrackingClicked()
         {
-            _playerInput.CalibrateFullBodyTrackingAuto();
+            _playerSpace.SaveAutomaticFullBodyCalibration();
 
             NotifyPropertyChanged(nameof(calibrateButtonText));
             NotifyPropertyChanged(nameof(isClearButtonEnabled));
@@ -148,7 +147,7 @@ namespace CustomAvatar.UI
 
         private void OnClearAutoFullBodyTrackingCalibrationDataClicked()
         {
-            _playerInput.ClearAutomaticFullBodyTrackingData();
+            _playerSpace.ClearAutomaticFullBodyCalibration();
 
             NotifyPropertyChanged(nameof(calibrateButtonText));
             NotifyPropertyChanged(nameof(isClearButtonEnabled));

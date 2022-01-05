@@ -14,35 +14,17 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using CustomAvatar.Player;
-using UnityEngine;
-using Zenject;
-
-namespace CustomAvatar.Avatar
+namespace CustomAvatar.Tracking
 {
-    internal class AvatarCenterAdjust : MonoBehaviour
+    public enum TrackedNodeType
     {
-        private PlayerAvatarManager _playerAvatarManager;
-
-        [Inject]
-        public void Construct(PlayerAvatarManager playerAvatarManager)
-        {
-            _playerAvatarManager = playerAvatarManager;
-        }
-
-        public void OnEnable()
-        {
-            _playerAvatarManager?.ParentTo(transform);
-        }
-
-        public void Start()
-        {
-            OnEnable();
-        }
-
-        public void OnDestroy()
-        {
-            _playerAvatarManager?.UnparentFrom(transform);
-        }
+        Origin,
+        Head,
+        LeftHand,
+        RightHand,
+        Waist,
+        LeftFoot,
+        RightFoot,
+        Unknown
     }
 }

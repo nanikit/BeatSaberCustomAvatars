@@ -65,15 +65,29 @@ namespace CustomAvatar.Avatar
         /// </summary>
         public float armSpan { get; private set; }
 
-        [Obsolete]
-        internal LoadedAvatar loadedAvatar { get; private set; }
+        public Pose headOffset { get; private set; }
 
-        internal Transform head { get; private set; }
-        internal Transform leftHand { get; private set; }
-        internal Transform rightHand { get; private set; }
-        internal Transform leftLeg { get; private set; }
-        internal Transform rightLeg { get; private set; }
-        internal Transform pelvis { get; private set; }
+        public Pose leftHandOffset { get; private set; }
+
+        public Pose rightHandOffset { get; private set; }
+
+        public Pose waistOffset { get; private set; }
+
+        public Pose leftFootOffset { get; private set; }
+
+        public Pose rightFootOffset { get; private set; }
+
+        internal Pose head { get; private set; }
+
+        internal Pose leftHand { get; private set; }
+
+        internal Pose rightHand { get; private set; }
+
+        internal Pose leftFoot { get; private set; }
+
+        internal Pose rightFoot { get; private set; }
+
+        internal Pose waist { get; private set; }
 
         private ILogger<AvatarPrefab> _logger;
 
@@ -127,34 +141,47 @@ namespace CustomAvatar.Avatar
                 Destroy(existingVrik);
             }
 
+            Transform head = transform.Find("Head");
+            Transform leftHand = transform.Find("LeftHand");
+            Transform rightHand = transform.Find("RightHand");
+            Transform waist = transform.Find("Pelvis");
+            Transform leftFoot = transform.Find("LeftLeg");
+            Transform rightFoot = transform.Find("RightLeg");
+
             if (vrikManager)
             {
-                if (vrikManager.areReferencesFilled)
-                {
-                    ikHelper.CreateOffsetTargetsIfMissing(vrikManager, transform);
-                }
-                else
+                if (!vrikManager.areReferencesFilled)
                 {
                     _logger.Warning("VRIKManager references are not filled; avatar will probably not work as expected");
                 }
-            }
 
-            head = transform.Find("Head");
-            leftHand = transform.Find("LeftHand");
-            rightHand = transform.Find("RightHand");
-            pelvis = transform.Find("Pelvis");
-            leftLeg = transform.Find("LeftLeg");
-            rightLeg = transform.Find("RightLeg");
+                CheckTargetWeight("Head", head, vrikManager.solver_spine_positionWeight, vrikManager.solver_spine_rotationWeight);
+                CheckTargetWeight("Left Hand", leftHand, vrikManager.solver_leftArm_positionWeight, vrikManager.solver_leftArm_rotationWeight);
+                CheckTargetWeight("Right Hand", rightHand, vrikManager.solver_rightArm_positionWeight, vrikManager.solver_rightArm_rotationWeight);
+                CheckTargetWeight("Waist", waist, vrikManager.solver_spine_pelvisPositionWeight, vrikManager.solver_spine_pelvisRotationWeight);
+                CheckTargetWeight("Left Foot", leftFoot, vrikManager.solver_leftLeg_positionWeight, vrikManager.solver_leftLeg_rotationWeight);
+                CheckTargetWeight("Right Foot", rightFoot, vrikManager.solver_rightLeg_positionWeight, vrikManager.solver_rightLeg_rotationWeight);
 
-            if (vrikManager)
-            {
-                CheckTargetWeight("Left Arm", leftHand, vrikManager.solver_leftArm_positionWeight, vrikManager.solver_leftArm_rotationWeight);
-                CheckTargetWeight("Right Arm", rightHand, vrikManager.solver_rightArm_positionWeight, vrikManager.solver_rightArm_rotationWeight);
-                CheckTargetWeight("Pelvis", pelvis, vrikManager.solver_spine_pelvisPositionWeight, vrikManager.solver_spine_pelvisRotationWeight);
-                CheckTargetWeight("Left Leg", leftLeg, vrikManager.solver_leftLeg_positionWeight, vrikManager.solver_leftLeg_rotationWeight);
-                CheckTargetWeight("Right Leg", rightLeg, vrikManager.solver_rightLeg_positionWeight, vrikManager.solver_rightLeg_rotationWeight);
+                FixTrackingReference("Head", head, vrikManager.references_head, vrikManager.solver_spine_headTarget);
+                FixTrackingReference("Left Hand", leftHand, vrikManager.references_leftHand, vrikManager.solver_leftArm_target);
+                FixTrackingReference("Right Hand", rightHand, vrikManager.references_rightHand, vrikManager.solver_rightArm_target);
+                FixTrackingReference("Waist", waist, vrikManager.references_pelvis, vrikManager.solver_spine_pelvisTarget);
+                FixTrackingReference("Left Foot", leftFoot, vrikManager.references_leftToes ?? vrikManager.references_leftFoot, vrikManager.solver_leftLeg_target);
+                FixTrackingReference("Right Foot", rightFoot, vrikManager.references_rightToes ?? vrikManager.references_rightFoot, vrikManager.solver_rightLeg_target);
 
-                FixTrackingReferences(vrikManager);
+                headOffset = GetOffset(HumanBodyBones.Head, head, vrikManager.references_head, vrikManager.solver_spine_headTarget);
+                leftHandOffset = GetOffset(HumanBodyBones.LeftHand, leftHand, vrikManager.references_leftHand, vrikManager.solver_leftArm_target);
+                rightHandOffset = GetOffset(HumanBodyBones.RightHand, rightHand, vrikManager.references_rightHand, vrikManager.solver_rightArm_target);
+                waistOffset = GetOffset(HumanBodyBones.Hips, waist, vrikManager.references_pelvis, vrikManager.solver_spine_pelvisTarget);
+                leftFootOffset = GetOffset(HumanBodyBones.LeftFoot, leftFoot, vrikManager.references_leftToes ? vrikManager.references_leftToes : vrikManager.references_leftFoot, vrikManager.solver_leftLeg_target);
+                rightFootOffset = GetOffset(HumanBodyBones.RightFoot, rightFoot, vrikManager.references_rightToes ? vrikManager.references_rightToes : vrikManager.references_rightFoot, vrikManager.solver_rightLeg_target);
+
+                this.head = GetPose(head);
+                this.leftHand = GetPose(leftHand);
+                this.rightHand = GetPose(rightHand);
+                this.waist = GetPose(waist);
+                this.leftFoot = GetPose(leftFoot);
+                this.rightFoot = GetPose(rightFoot);
             }
 
             if (transform.localPosition.sqrMagnitude > 0)
@@ -167,12 +194,39 @@ namespace CustomAvatar.Avatar
             isIKAvatar = vrikManager;
             supportsFingerTracking = poseManager && poseManager.isValid;
 
-            eyeHeight = GetEyeHeight();
-            armSpan = GetArmSpan(vrikManager);
+            eyeHeight = GetEyeHeight(head);
+            armSpan = GetArmSpan(vrikManager, leftHand, rightHand);
+        }
 
-#pragma warning disable CS0612, CS0618
-            loadedAvatar = new LoadedAvatar(this);
-#pragma warning restore CS0612, CS0618
+        private Pose GetPose(Transform transform)
+        {
+            if (!transform)
+            {
+                return Pose.identity;
+            }
+
+            return new Pose(transform.position, transform.rotation);
+        }
+
+        private Pose GetOffset(HumanBodyBones bone, Transform target, Transform reference, Transform ikTarget)
+        {
+            if (!target)
+            {
+                _logger.Warning($"No transform for {bone}");
+                return Pose.identity;
+            }
+
+            if (!reference && !ikTarget)
+            {
+                _logger.Warning($"No reference nor IK target for {bone}");
+                return new Pose(Vector3.zero, Quaternion.Inverse(target.rotation));
+            }
+
+            Transform offsetTransform = ikTarget ? ikTarget : reference;
+
+            return new Pose(
+                Quaternion.Inverse(target.rotation) * (offsetTransform.position - target.position),
+                Quaternion.Inverse(target.rotation) * offsetTransform.rotation);
         }
 
         private void CheckTargetWeight(string name, Transform target, float positionWeight, float rotationWeight)
@@ -183,7 +237,7 @@ namespace CustomAvatar.Avatar
             if (rotationWeight <= 0.1f) _logger.Warning($"{name} rotation weight is very small ({rotationWeight:0.00}); is that on purpose?");
         }
 
-        private float GetEyeHeight()
+        private float GetEyeHeight(Transform head)
         {
             if (!head)
             {
@@ -202,16 +256,6 @@ namespace CustomAvatar.Avatar
             _logger.Trace($"Measured eye height: {eyeHeight} m");
 
             return eyeHeight;
-        }
-
-        private void FixTrackingReferences(VRIKManager vrikManager)
-        {
-            FixTrackingReference("Head", head, vrikManager.references_head, vrikManager.solver_spine_headTarget);
-            FixTrackingReference("Left Hand", leftHand, vrikManager.references_leftHand, vrikManager.solver_leftArm_target);
-            FixTrackingReference("Right Hand", rightHand, vrikManager.references_rightHand, vrikManager.solver_rightArm_target);
-            FixTrackingReference("Waist", pelvis, vrikManager.references_pelvis, vrikManager.solver_spine_pelvisTarget);
-            FixTrackingReference("Left Foot", leftLeg, vrikManager.references_leftToes ?? vrikManager.references_leftFoot, vrikManager.solver_leftLeg_target);
-            FixTrackingReference("Right Foot", rightLeg, vrikManager.references_rightToes ?? vrikManager.references_rightFoot, vrikManager.solver_rightLeg_target);
         }
 
         private void FixTrackingReference(string name, Transform tracker, Transform reference, Transform target)
@@ -243,7 +287,7 @@ namespace CustomAvatar.Avatar
         /// Measure avatar arm span. Since the player's measured arm span is actually from palm to palm
         /// (approximately) due to the way the controllers are held, this isn't "true" arm span.
         /// </summary>
-        private float GetArmSpan(VRIKManager vrikManager)
+        private float GetArmSpan(VRIKManager vrikManager, Transform leftHand, Transform rightHand)
         {
             if (!vrikManager) return BeatSaberUtilities.kDefaultPlayerArmSpan;
 
@@ -313,7 +357,7 @@ namespace CustomAvatar.Avatar
             vrikManager.solver_leftArm_target = ikManager.LeftHandTarget;
             vrikManager.solver_rightArm_target = ikManager.RightHandTarget;
 
-            if (!(ikManager is IKManagerAdvanced ikManagerAdvanced)) return;
+            if (ikManager is not IKManagerAdvanced ikManagerAdvanced) return;
 
             vrikManager.solver_spine_pelvisTarget = ikManagerAdvanced.Spine_pelvisTarget;
             vrikManager.solver_spine_pelvisPositionWeight = ikManagerAdvanced.Spine_pelvisPositionWeight;

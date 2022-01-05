@@ -32,16 +32,14 @@ namespace CustomAvatar.UI
 
         #endregion
 
-        private readonly VRPlayerInputInternal _playerInput;
         private readonly Settings _settings;
         private readonly PlayerDataModel _playerDataModel;
         private readonly ArmSpanMeasurer _armSpanMeasurer;
 
         private float _armSpan;
 
-        internal GeneralSettingsHost(VRPlayerInputInternal playerInput, Settings settings, PlayerDataModel playerDataModel, ArmSpanMeasurer armSpanMeasurer)
+        internal GeneralSettingsHost(Settings settings, PlayerDataModel playerDataModel, ArmSpanMeasurer armSpanMeasurer)
         {
-            _playerInput = playerInput;
             _settings = settings;
             _playerDataModel = playerDataModel;
             _armSpanMeasurer = armSpanMeasurer;
@@ -128,7 +126,7 @@ namespace CustomAvatar.UI
             }
         }
 
-        public bool isMeasureButtonEnabled => _playerInput.TryGetUncalibratedPose(DeviceUse.LeftHand, out Pose _) && _playerInput.TryGetUncalibratedPose(DeviceUse.RightHand, out Pose _);
+        public bool isMeasureButtonEnabled => false; // _playerInput.TryGetUncalibratedPose(DeviceUse.LeftHand, out Pose _) && _playerInput.TryGetUncalibratedPose(DeviceUse.RightHand, out Pose _);
 
         public string measureButtonText => _armSpanMeasurer.isMeasuring ? "Cancel" : "Measure";
 
@@ -157,7 +155,7 @@ namespace CustomAvatar.UI
         {
             _armSpanMeasurer.updated += OnArmSpanMeasurementChanged;
             _armSpanMeasurer.completed += OnArmSpanMeasurementCompleted;
-            _playerInput.inputChanged += OnPlayerInputChanged;
+            //_playerInput.inputChanged += OnPlayerInputChanged;
 
             _armSpan = _settings.playerArmSpan;
             NotifyPropertyChanged(nameof(armSpan));
@@ -170,7 +168,7 @@ namespace CustomAvatar.UI
         {
             _armSpanMeasurer.updated -= OnArmSpanMeasurementChanged;
             _armSpanMeasurer.completed -= OnArmSpanMeasurementCompleted;
-            _playerInput.inputChanged -= OnPlayerInputChanged;
+            //_playerInput.inputChanged -= OnPlayerInputChanged;
         }
 
         private void OnPlayerInputChanged()
@@ -198,36 +196,28 @@ namespace CustomAvatar.UI
 
         private string ResizeModeFormatter(object value)
         {
-            if (!(value is AvatarResizeMode avatarResizeMode)) return null;
+            if (value is not AvatarResizeMode avatarResizeMode) return null;
 
-            switch (avatarResizeMode)
+            return avatarResizeMode switch
             {
-                case AvatarResizeMode.Height:
-                    return "Height";
-                case AvatarResizeMode.ArmSpan:
-                    return "Arm Span";
-                case AvatarResizeMode.None:
-                    return "Don't Resize";
-                default:
-                    return null;
-            }
+                AvatarResizeMode.Height => "Height",
+                AvatarResizeMode.ArmSpan => "Arm Span",
+                AvatarResizeMode.None => "Don't Resize",
+                _ => null,
+            };
         }
 
         private string FloorHeightAdjustFormatter(object value)
         {
-            if (!(value is FloorHeightAdjustMode floorHeightAdjustMode)) return null;
+            if (value is not FloorHeightAdjustMode floorHeightAdjustMode) return null;
 
-            switch (floorHeightAdjustMode)
+            return floorHeightAdjustMode switch
             {
-                case FloorHeightAdjustMode.Off:
-                    return "Off";
-                case FloorHeightAdjustMode.PlayersPlaceOnly:
-                    return "Player's Place Only";
-                case FloorHeightAdjustMode.EntireEnvironment:
-                    return "Entire Environment";
-                default:
-                    return null;
-            }
+                FloorHeightAdjustMode.Off => "Off",
+                FloorHeightAdjustMode.PlayersPlaceOnly => "Player's Place Only",
+                FloorHeightAdjustMode.EntireEnvironment => "Entire Environment",
+                _ => null,
+            };
         }
 
         private string ArmSpanFormatter(float value)

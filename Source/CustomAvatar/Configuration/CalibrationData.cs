@@ -33,9 +33,9 @@ namespace CustomAvatar.Configuration
         public static readonly byte[] kCalibrationDataFileSignature = { 0x43, 0x41, 0x63, 0x64 }; // Custom Avatars calibration data (CAcd)
         public static readonly byte kCalibrationDataFileVersion = 1;
 
-        public FullBodyCalibration automaticCalibration { get; } = new FullBodyCalibration();
+        public FullBodyCalibration automaticCalibration { get; } = new();
 
-        private readonly Dictionary<string, FullBodyCalibration> _manualCalibration = new Dictionary<string, FullBodyCalibration>();
+        private readonly Dictionary<string, FullBodyCalibration> _manualCalibration = new();
 
         private readonly ILogger<CalibrationData> _logger;
 
@@ -71,12 +71,13 @@ namespace CustomAvatar.Configuration
         {
             if (!IsValidFileName(fileName)) throw new ArgumentException("Invalid file name", nameof(fileName));
 
-            if (!_manualCalibration.ContainsKey(fileName))
+            if (!_manualCalibration.TryGetValue(fileName, out FullBodyCalibration value))
             {
-                _manualCalibration.Add(fileName, new FullBodyCalibration());
+                value = new FullBodyCalibration();
+                _manualCalibration.Add(fileName, value);
             }
 
-            return _manualCalibration[fileName];
+            return value;
         }
 
         private void Load()
@@ -181,6 +182,13 @@ namespace CustomAvatar.Configuration
             public Pose rightFoot = Pose.identity;
 
             public bool isCalibrated => !leftFoot.Equals(Pose.identity) || !rightFoot.Equals(Pose.identity) || !waist.Equals(Pose.identity);
+
+            public void Clear()
+            {
+                waist = Pose.identity;
+                leftFoot = Pose.identity;
+                rightFoot = Pose.identity;
+            }
         }
     }
 }

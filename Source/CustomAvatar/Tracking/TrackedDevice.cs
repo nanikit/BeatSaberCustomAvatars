@@ -21,12 +21,12 @@ namespace CustomAvatar.Tracking
     internal readonly struct TrackedDevice
     {
         public readonly string id;
-        public readonly DeviceUse deviceUse;
+        public readonly TrackedNodeType deviceUse;
         public readonly bool isTracking;
         public readonly Vector3 position;
         public readonly Quaternion rotation;
 
-        public TrackedDevice(string id, DeviceUse deviceUse, bool isTracking, Vector3 position, Quaternion rotation)
+        public TrackedDevice(string id, TrackedNodeType deviceUse, bool isTracking, Vector3 position, Quaternion rotation)
         {
             this.id = id;
             this.deviceUse = deviceUse;

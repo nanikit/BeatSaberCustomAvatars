@@ -43,26 +43,26 @@ namespace CustomAvatar.Tracking
             _deviceProvider = deviceProvider;
         }
 
-        public bool TryGetDeviceState(DeviceUse use, out TrackedDevice device)
+        public bool TryGetDeviceState(TrackedNodeType use, out TrackedDevice device)
         {
             switch (use)
             {
-                case DeviceUse.Head:
+                case TrackedNodeType.Head:
                     return TryGetDevice(_head, out device);
 
-                case DeviceUse.LeftHand:
+                case TrackedNodeType.LeftHand:
                     return TryGetDevice(_leftHand, out device);
 
-                case DeviceUse.RightHand:
+                case TrackedNodeType.RightHand:
                     return TryGetDevice(_rightHand, out device);
 
-                case DeviceUse.Waist:
+                case TrackedNodeType.Waist:
                     return TryGetDevice(_waist, out device);
 
-                case DeviceUse.LeftFoot:
+                case TrackedNodeType.LeftFoot:
                     return TryGetDevice(_leftFoot, out device);
 
-                case DeviceUse.RightFoot:
+                case TrackedNodeType.RightFoot:
                     return TryGetDevice(_rightFoot, out device);
 
                 default:
@@ -109,41 +109,41 @@ namespace CustomAvatar.Tracking
 
                 switch (device.deviceUse)
                 {
-                    case DeviceUse.Head:
+                    case TrackedNodeType.Head:
                         head = device.id;
                         break;
 
-                    case DeviceUse.LeftHand:
+                    case TrackedNodeType.LeftHand:
                         leftHand = device.id;
                         break;
 
-                    case DeviceUse.RightHand:
+                    case TrackedNodeType.RightHand:
                         rightHand = device.id;
                         break;
 
-                    case DeviceUse.Waist:
+                    case TrackedNodeType.Waist:
                         waist = device.id;
                         break;
 
-                    case DeviceUse.LeftFoot:
+                    case TrackedNodeType.LeftFoot:
                         leftFoot = device.id;
                         break;
 
-                    case DeviceUse.RightFoot:
+                    case TrackedNodeType.RightFoot:
                         rightFoot = device.id;
                         break;
                 }
             }
 
-            AssignDevice(ref _head, head, DeviceUse.Head);
-            AssignDevice(ref _leftHand, leftHand, DeviceUse.LeftHand);
-            AssignDevice(ref _rightHand, rightHand, DeviceUse.RightHand);
-            AssignDevice(ref _waist, waist, DeviceUse.Waist);
-            AssignDevice(ref _leftFoot, leftFoot, DeviceUse.LeftFoot);
-            AssignDevice(ref _rightFoot, rightFoot, DeviceUse.RightFoot);
+            AssignDevice(ref _head, head, TrackedNodeType.Head);
+            AssignDevice(ref _leftHand, leftHand, TrackedNodeType.LeftHand);
+            AssignDevice(ref _rightHand, rightHand, TrackedNodeType.RightHand);
+            AssignDevice(ref _waist, waist, TrackedNodeType.Waist);
+            AssignDevice(ref _leftFoot, leftFoot, TrackedNodeType.LeftFoot);
+            AssignDevice(ref _rightFoot, rightFoot, TrackedNodeType.RightFoot);
         }
 
-        private void AssignDevice(ref string current, string potential, DeviceUse use)
+        private void AssignDevice(ref string current, string potential, TrackedNodeType use)
         {
             if (current == potential) return;
 

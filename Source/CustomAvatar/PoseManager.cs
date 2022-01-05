@@ -16,6 +16,12 @@
 
 using UnityEngine;
 
+#if !UNITY_EDITOR
+using CustomAvatar.Tracking;
+using Zenject;
+using System.Diagnostics.CodeAnalysis;
+#endif
+
 namespace CustomAvatar
 {
     [ExecuteAlways]
@@ -412,5 +418,37 @@ namespace CustomAvatar
             // thanks Unity
             return !pose.position.Equals(default) && !pose.rotation.Equals(default) && (pose.rotation.x != 0 || pose.rotation.y != 0 || pose.rotation.z != 0 || pose.rotation.w != 0);
         }
+
+#if !UNITY_EDITOR
+        private IAvatarInput _input;
+
+        [Inject]
+        [SuppressMessage("CodeQuality", "IDE0051", Justification = "Used by Zenject")]
+        private void Construct(IAvatarInput input)
+        {
+            _input = input;
+        }
+
+        private void Update()
+        {
+            if (_input.TryGetFingerCurl(TrackedNodeType.LeftHand, out FingerCurl leftFingerCurl))
+            {
+                ApplyLeftHandFingerPoses(leftFingerCurl.thumb, leftFingerCurl.index, leftFingerCurl.middle, leftFingerCurl.ring, leftFingerCurl.little);
+            }
+            else
+            {
+                ApplyLeftHandFingerPoses(1, 1, 1, 1, 1);
+            }
+
+            if (_input.TryGetFingerCurl(TrackedNodeType.RightHand, out FingerCurl rightFingerCurl))
+            {
+                ApplyRightHandFingerPoses(rightFingerCurl.thumb, rightFingerCurl.index, rightFingerCurl.middle, rightFingerCurl.ring, rightFingerCurl.little);
+            }
+            else
+            {
+                ApplyRightHandFingerPoses(1, 1, 1, 1, 1);
+            }
+        }
+#endif
     }
 }

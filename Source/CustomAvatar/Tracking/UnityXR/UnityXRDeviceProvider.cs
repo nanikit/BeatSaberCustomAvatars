@@ -57,19 +57,19 @@ namespace CustomAvatar.Tracking.UnityXR
             {
                 if (!inputDevice.isValid) continue;
 
-                DeviceUse use = DeviceUse.Unknown;
+                TrackedNodeType use = TrackedNodeType.Unknown;
 
                 if (inputDevice.characteristics.HasFlag(InputDeviceCharacteristics.HeadMounted))
                 {
-                    use = DeviceUse.Head;
+                    use = TrackedNodeType.Head;
                 }
                 else if (inputDevice.characteristics.HasFlag(InputDeviceCharacteristics.HeldInHand | InputDeviceCharacteristics.Left))
                 {
-                    use = DeviceUse.LeftHand;
+                    use = TrackedNodeType.LeftHand;
                 }
                 else if (inputDevice.characteristics.HasFlag(InputDeviceCharacteristics.HeldInHand | InputDeviceCharacteristics.Right))
                 {
-                    use = DeviceUse.RightHand;
+                    use = TrackedNodeType.RightHand;
                 }
 
                 inputDevice.TryGetFeatureValue(CommonUsages.isTracked, out bool isTracked);

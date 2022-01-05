@@ -18,17 +18,17 @@ using CustomAvatar.Avatar;
 using CustomAvatar.Tracking;
 using CustomAvatar.Player;
 using CustomAvatar.Configuration;
-using UnityEngine;
 
 namespace CustomAvatar.UI
 {
     internal class AvatarSpecificSettingsHost : ViewControllerHost
     {
         private readonly PlayerAvatarManager _avatarManager;
-        private readonly VRPlayerInputInternal _playerInput;
         private readonly Settings _settings;
         private readonly CalibrationData _calibrationData;
         private readonly ManualCalibrationHelper _manualCalibrationHelper;
+        private readonly DeviceManager _deviceManager;
+        private readonly PlayerSpaceController _playerSpace;
 
         private bool _isLoaderActive;
         private bool _calibrating;
@@ -36,13 +36,14 @@ namespace CustomAvatar.UI
         private Settings.AvatarSpecificSettings _currentAvatarSettings;
         private CalibrationData.FullBodyCalibration _currentAvatarManualCalibration;
 
-        internal AvatarSpecificSettingsHost(PlayerAvatarManager avatarManager, VRPlayerInputInternal playerInput, Settings settings, CalibrationData calibrationData, ManualCalibrationHelper manualCalibrationHelper)
+        internal AvatarSpecificSettingsHost(PlayerAvatarManager avatarManager, Settings settings, CalibrationData calibrationData, ManualCalibrationHelper manualCalibrationHelper, DeviceManager deviceManager, PlayerSpaceController playerSpace)
         {
             _avatarManager = avatarManager;
-            _playerInput = playerInput;
             _settings = settings;
             _calibrationData = calibrationData;
             _manualCalibrationHelper = manualCalibrationHelper;
+            _deviceManager = deviceManager;
+            _playerSpace = playerSpace;
         }
 
         internal bool useAutomaticCalibration
@@ -109,13 +110,15 @@ namespace CustomAvatar.UI
 
         protected string clearButtonHoverHint => _calibrating ? "Cancel calibration" : "Clear calibration data";
 
-        private bool _areTrackersDetected => _playerInput.TryGetUncalibratedPose(DeviceUse.Waist, out Pose _) || _playerInput.TryGetUncalibratedPose(DeviceUse.LeftFoot, out Pose _) || _playerInput.TryGetUncalibratedPose(DeviceUse.RightFoot, out Pose _);
+        private bool _areTrackersDetected => _deviceManager.TryGetDeviceState(TrackedNodeType.Waist, out TrackedDevice _) ||
+                                             _deviceManager.TryGetDeviceState(TrackedNodeType.LeftFoot, out TrackedDevice _) ||
+                                             _deviceManager.TryGetDeviceState(TrackedNodeType.RightFoot, out TrackedDevice _);
 
         public override void DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling)
         {
             _avatarManager.avatarLoading += OnAvatarLoading;
             _avatarManager.avatarChanged += OnAvatarChanged;
-            _playerInput.inputChanged += OnInputChanged;
+            _deviceManager.devicesChanged += OnInputChanged;
 
             OnAvatarChanged(_avatarManager.currentlySpawnedAvatar);
             OnInputChanged();
@@ -127,7 +130,7 @@ namespace CustomAvatar.UI
 
             _avatarManager.avatarLoading -= OnAvatarLoading;
             _avatarManager.avatarChanged -= OnAvatarChanged;
-            _playerInput.inputChanged -= OnInputChanged;
+            _deviceManager.devicesChanged -= OnInputChanged;
         }
 
         private void OnAvatarLoading(string fullPath, string name)
@@ -210,7 +213,7 @@ namespace CustomAvatar.UI
             }
             else
             {
-                _playerInput.ClearManualFullBodyTrackingData(_avatarManager.currentlySpawnedAvatar);
+                _playerSpace.ClearManualFullBodyCalibration(_avatarManager.currentlySpawnedAvatar);
                 NotifyPropertyChanged(nameof(calibrateButtonText));
                 NotifyPropertyChanged(nameof(isClearButtonEnabled));
             }
@@ -230,7 +233,7 @@ namespace CustomAvatar.UI
         {
             if (_avatarManager.currentlySpawnedAvatar && save)
             {
-                _playerInput.CalibrateFullBodyTrackingManual(_avatarManager.currentlySpawnedAvatar);
+                _playerSpace.SaveManualFullBodyCalibration(_avatarManager.currentlySpawnedAvatar);
 
                 useAutomaticCalibration = false;
             }
@@ -241,8 +244,8 @@ namespace CustomAvatar.UI
         private void SetCalibrationMode(bool enabled)
         {
             _calibrating = enabled;
+            _playerSpace.SetCalibrationModeActive(enabled);
             _manualCalibrationHelper.enabled = enabled;
-            _playerInput.isCalibrationModeEnabled = enabled;
 
             NotifyPropertyChanged(nameof(calibrateButtonText));
             NotifyPropertyChanged(nameof(calibrateButtonHoverHint));

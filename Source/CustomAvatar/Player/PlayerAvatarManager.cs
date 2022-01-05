@@ -56,12 +56,6 @@ namespace CustomAvatar.Player
         public SpawnedAvatar currentlySpawnedAvatar { get; private set; }
 
         /// <summary>
-        /// Event triggered when the current avatar is deleted an a new one starts loading. Note that the argument may be null if no avatar was selected to replace the previous one.
-        /// </summary>
-        [Obsolete("Use the avatarLoading event instead")]
-        public event Action<string> avatarStartedLoading;
-
-        /// <summary>
         /// Event triggered when the current avatar is deleted an a new one starts loading. Note that both arguments may be null if no avatar was selected to replace the previous one.
         /// </summary>
         public event AvatarLoadingDelegate avatarLoading;
@@ -88,8 +82,7 @@ namespace CustomAvatar.Player
         private readonly AvatarSpawner _spawner;
         private readonly BeatSaberUtilities _beatSaberUtilities;
 
-        private readonly Dictionary<string, AvatarInfo> _avatarInfos = new Dictionary<string, AvatarInfo>();
-        private readonly Stack<Transform> _parentHistory = new Stack<Transform>();
+        private readonly Dictionary<string, AvatarInfo> _avatarInfos = new();
 
         private string _switchingToPath;
         private Settings.AvatarSpecificSettings _currentAvatarSettings;
@@ -208,7 +201,6 @@ namespace CustomAvatar.Player
             if (string.IsNullOrEmpty(fileName))
             {
                 _switchingToPath = null;
-                avatarStartedLoading?.Invoke(null);
                 SwitchToAvatar(null);
                 return;
             }
@@ -219,7 +211,6 @@ namespace CustomAvatar.Player
 
             _avatarInfos.TryGetValue(fileName, out AvatarInfo cachedInfo);
 
-            avatarStartedLoading?.Invoke(fullPath);
             avatarLoading?.Invoke(fullPath, !string.IsNullOrWhiteSpace(cachedInfo.name) ? cachedInfo.name : fileName);
 
             try
@@ -297,7 +288,7 @@ namespace CustomAvatar.Player
                 Object.Destroy(currentlySpawnedAvatar.gameObject);
             }
 
-            var avatarInfo = new AvatarInfo(avatar);
+            AvatarInfo avatarInfo = new(avatar);
 
             _settings.previousAvatarPath = avatarInfo.fileName;
 
@@ -312,7 +303,7 @@ namespace CustomAvatar.Player
             }
 
             if (_currentAvatarSettings != null) _currentAvatarSettings.ignoreExclusions.changed -= OnIgnoreFirstPersonExclusionsChanged;
-            currentlySpawnedAvatar = _spawner.SpawnAvatar(avatar, _container.Resolve<VRPlayerInputInternal>(), _avatarContainer.transform);
+            currentlySpawnedAvatar = _spawner.SpawnAvatar(avatar, _container.Resolve<VRPlayerInput>(), _avatarContainer.transform);
             _currentAvatarSettings = _settings.GetAvatarSettings(avatar.fileName);
             _currentAvatarSettings.ignoreExclusions.changed += OnIgnoreFirstPersonExclusionsChanged;
 
@@ -345,52 +336,6 @@ namespace CustomAvatar.Player
             index = (index + files.Count - 1) % files.Count;
 
             await SwitchToAvatarAsync(files[index], null);
-        }
-
-        internal void ParentTo(Transform parent)
-        {
-            if (!parent) throw new ArgumentNullException(nameof(parent));
-
-            _parentHistory.Push(parent);
-            _avatarContainer.transform.SetParent(parent, false);
-            _logger.Trace($"Parented avatar container to '{parent.name}' (scene '{parent.gameObject.scene.name}')");
-        }
-
-        internal void UnparentFrom(Transform parent)
-        {
-            if (!parent) throw new ArgumentNullException(nameof(parent));
-
-            if (_avatarContainer.transform.parent != parent)
-            {
-                return;
-            }
-
-            Transform newParent = _parentHistory.Pop();
-
-            while (!newParent || newParent == parent)
-            {
-                if (_parentHistory.Count > 0)
-                {
-                    newParent = _parentHistory.Pop();
-                }
-                else
-                {
-                    newParent = null;
-                    break;
-                }
-            }
-
-            _avatarContainer.transform.SetParent(newParent, false);
-
-            if (newParent)
-            {
-                _logger.Trace($"Parented avatar container to '{parent.name}' (scene '{parent.gameObject.scene.name}')");
-            }
-            else
-            {
-                _logger.Warning($"Parented avatar container to nothing!");
-                Object.DontDestroyOnLoad(_avatarContainer);
-            }
         }
 
         internal float GetFloorOffset()

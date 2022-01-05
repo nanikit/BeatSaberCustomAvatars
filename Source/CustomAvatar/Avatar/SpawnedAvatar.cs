@@ -31,12 +31,6 @@ namespace CustomAvatar.Avatar
     public class SpawnedAvatar : MonoBehaviour
     {
         /// <summary>
-        /// The <see cref="LoadedAvatar"/> used as a reference.
-        /// </summary>
-        [Obsolete("Use prefab instead")]
-        public LoadedAvatar avatar { get; private set; }
-
-        /// <summary>
         /// The <see cref="AvatarPrefab"/> used to spawn this avatar.
         /// </summary>
         public AvatarPrefab prefab { get; private set; }
@@ -64,21 +58,6 @@ namespace CustomAvatar.Avatar
 
         public float scaledEyeHeight => prefab.eyeHeight * scale;
 
-        public Transform head { get; private set; }
-        public Transform body { get; private set; }
-        public Transform leftHand { get; private set; }
-        public Transform rightHand { get; private set; }
-        public Transform leftLeg { get; private set; }
-        public Transform rightLeg { get; private set; }
-        public Transform pelvis { get; private set; }
-
-        [Obsolete("Use GetComponent<AvatarTracking>() instead")] internal AvatarTracking tracking { get; private set; }
-        [Obsolete("Use GetComponent<AvatarIK>() instead")] internal AvatarIK ik { get; private set; }
-        [Obsolete("Use GetComponent<AvatarFingerTracking>() instead")] internal AvatarFingerTracking fingerTracking { get; private set; }
-
-
-        [Obsolete("Get isLocomotionEnabled on the AvatarIK component instead")] internal bool isLocomotionEnabled { get; private set; }
-
         private ILogger<SpawnedAvatar> _logger;
         private GameScenesManager _gameScenesManager;
 
@@ -88,33 +67,6 @@ namespace CustomAvatar.Avatar
 
         private Vector3 _initialLocalPosition;
         private Vector3 _initialLocalScale;
-
-        [Obsolete("Get isLocomotionEnabled on the AvatarIK component instead")]
-        public void SetLocomotionEnabled(bool enabled)
-        {
-            if (TryGetComponent(out AvatarIK ik))
-            {
-                ik.isLocomotionEnabled = enabled;
-            }
-        }
-
-        [Obsolete]
-        public void EnableCalibrationMode()
-        {
-            if (!ik) return;
-
-            tracking.isCalibrationModeEnabled = true;
-            ik.isCalibrationModeEnabled = true;
-        }
-
-        [Obsolete]
-        public void DisableCalibrationMode()
-        {
-            if (!ik) return;
-
-            tracking.isCalibrationModeEnabled = false;
-            ik.isCalibrationModeEnabled = false;
-        }
 
         public void SetFirstPersonVisibility(FirstPersonVisibility visibility)
         {
@@ -146,25 +98,13 @@ namespace CustomAvatar.Avatar
             _eventManager = GetComponent<EventManager>();
             _firstPersonExclusions = GetComponentsInChildren<FirstPersonExclusion>();
             _renderers = GetComponentsInChildren<Renderer>();
-
-            head = transform.Find("Head");
-            body = transform.Find("Body");
-            leftHand = transform.Find("LeftHand");
-            rightHand = transform.Find("RightHand");
-            pelvis = transform.Find("Pelvis");
-            leftLeg = transform.Find("LeftLeg");
-            rightLeg = transform.Find("RightLeg");
         }
 
         [Inject]
-        private void Construct(ILogger<SpawnedAvatar> logger, AvatarPrefab avatarPrefab, IAvatarInput avatarInput, GameScenesManager gameScenesManager)
+        private void Construct(ILogger<SpawnedAvatar> logger, AvatarPrefab avatarPrefab, IAvatarInput avatarTransforms, GameScenesManager gameScenesManager)
         {
             prefab = avatarPrefab;
-            input = avatarInput;
-
-#pragma warning disable CS0612, CS0618
-            avatar = avatarPrefab.loadedAvatar;
-#pragma warning restore CS0612, CS0618
+            input = avatarTransforms;
 
             _logger = logger;
             _gameScenesManager = gameScenesManager;

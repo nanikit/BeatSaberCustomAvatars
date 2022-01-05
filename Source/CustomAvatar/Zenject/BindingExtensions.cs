@@ -22,9 +22,9 @@ namespace CustomAvatar.Zenject
 {
     internal static class BindingExtensions
     {
-        public static ConcreteIdArgConditionCopyNonLazyBinder FromNewComponentOnNewGameObject<TContract>(this FromBinderGeneric<TContract> binder)
+        public static ConcreteIdArgConditionCopyNonLazyBinder FromNewComponentOnNewGameObject<TContract>(this FromBinderGeneric<TContract> binder, string name = null)
         {
-            return binder.FromNewComponentOn(new GameObject(typeof(TContract).Name)).AsCached();
+            return binder.FromNewComponentOn(new GameObject(name ?? typeof(TContract).Name)).AsCached();
         }
 
         public static ConcreteIdArgConditionCopyNonLazyBinder FromNewComponentOnNewGameObject(this FromBinderNonGeneric binder, string name = null)

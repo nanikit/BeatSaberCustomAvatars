@@ -1,69 +1,97 @@
-﻿//  Beat Saber Custom Avatars - Custom player models for body presence in Beat Saber.
-//  Copyright © 2018-2021  Nicolas Gnyra and Beat Saber Custom Avatars Contributors
-//
-//  This library is free software: you can redistribute it and/or
-//  modify it under the terms of the GNU Lesser General Public
-//  License as published by the Free Software Foundation, either
-//  version 3 of the License, or (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU Lesser General Public License for more details.
-//
-//  You should have received a copy of the GNU Lesser General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
+﻿using System;
 using CustomAvatar.Tracking;
-using CustomAvatar.Utilities;
-using System;
+using DynamicOpenVR.IO;
 using UnityEngine;
 using Zenject;
 
 namespace CustomAvatar.Player
 {
-    /// <summary>
-    /// The player's <see cref="IAvatarInput"/> with calibration and other settings applied.
-    /// </summary>
-    public class VRPlayerInput : IInitializable, IDisposable, IAvatarInput
+    internal class VRPlayerInput : IAvatarInput, IInitializable, IDisposable
     {
-        public static readonly float kDefaultPlayerArmSpan = 1.8f;
+        public const float kDefaultPlayerArmSpan = 1.7f;
 
-        public bool allowMaintainPelvisPosition => _internalPlayerInput.allowMaintainPelvisPosition;
+        private readonly PlayerSpaceController _playerSpace;
+
+        private SkeletalInput _leftHandAnimAction;
+        private SkeletalInput _rightHandAnimAction;
+
+        public VRPlayerInput(PlayerSpaceController playerSpace)
+        {
+            _playerSpace = playerSpace;
+        }
+
+        public bool allowMaintainPelvisPosition => false;
+
 
         public event Action inputChanged;
 
-        private readonly VRPlayerInputInternal _internalPlayerInput;
-        private readonly TrackingHelper _trackingHelper;
-
-        internal VRPlayerInput(VRPlayerInputInternal internalPlayerInput, TrackingHelper trackingHelper)
-        {
-            _internalPlayerInput = internalPlayerInput;
-            _trackingHelper = trackingHelper;
-        }
-
         public void Initialize()
         {
-            _internalPlayerInput.inputChanged += inputChanged;
+            _leftHandAnimAction = new SkeletalInput("/actions/customavatars/in/lefthandanim");
+            _rightHandAnimAction = new SkeletalInput("/actions/customavatars/in/righthandanim");
+        }
+
+        public bool TryGetFingerCurl(TrackedNodeType use, out FingerCurl curl)
+        {
+            SkeletalInput handAnim = use switch
+            {
+                TrackedNodeType.LeftHand => _leftHandAnimAction,
+                TrackedNodeType.RightHand => _rightHandAnimAction,
+                _ => throw new InvalidOperationException($"{nameof(TryGetFingerCurl)} only supports {nameof(TrackedNodeType.LeftHand)} and {nameof(TrackedNodeType.RightHand)}"),
+            };
+
+            if (!handAnim.isActive || handAnim.summaryData == null)
+            {
+                curl = null;
+                return false;
+            }
+
+            curl = new FingerCurl(handAnim.summaryData.thumbCurl, handAnim.summaryData.indexCurl, handAnim.summaryData.middleCurl, handAnim.summaryData.ringCurl, handAnim.summaryData.littleCurl);
+            return true;
+        }
+
+        public bool TryGetTransform(TrackedNodeType type, out Transform transform)
+        {
+            switch (type)
+            {
+                case TrackedNodeType.Head:
+                    transform = _playerSpace.head.targetTransform;
+                    return transform && _playerSpace.head.isTracking;
+
+                case TrackedNodeType.LeftHand:
+                    transform = _playerSpace.leftHand.targetTransform;
+                    return transform && _playerSpace.leftHand.isTracking;
+
+                case TrackedNodeType.RightHand:
+                    transform = _playerSpace.rightHand.targetTransform;
+                    return transform && _playerSpace.rightHand.isTracking;
+
+                case TrackedNodeType.Waist:
+                    transform = _playerSpace.waist.targetTransform;
+                    return transform && _playerSpace.waist.isTracking;
+
+                case TrackedNodeType.LeftFoot:
+                    transform = _playerSpace.leftFoot.targetTransform;
+                    return transform && _playerSpace.leftFoot.isTracking;
+
+                case TrackedNodeType.RightFoot:
+                    transform = _playerSpace.rightFoot.targetTransform;
+                    return transform && _playerSpace.rightFoot.isTracking;
+            }
+
+            transform = null;
+            return false;
         }
 
         public void Dispose()
         {
-            _internalPlayerInput.inputChanged -= inputChanged;
+            _leftHandAnimAction?.Dispose();
+            _rightHandAnimAction?.Dispose();
         }
 
-        public bool TryGetFingerCurl(DeviceUse use, out FingerCurl curl)
+        private void OnNodeChanged()
         {
-            return _internalPlayerInput.TryGetFingerCurl(use, out curl);
-        }
-
-        public bool TryGetPose(DeviceUse use, out Pose pose)
-        {
-            if (!_internalPlayerInput.TryGetPose(use, out pose)) return false;
-
-            _trackingHelper.ApplyRoomAdjust(ref pose.position, ref pose.rotation);
-
-            return true;
+            inputChanged?.Invoke();
         }
     }
 }

@@ -14,16 +14,18 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using BeatSaberMarkupLanguage;
-using CustomAvatar.Avatar;
 using CustomAvatar.Logging;
 using CustomAvatar.Player;
 using CustomAvatar.Rendering;
+using CustomAvatar.Tracking;
 using CustomAvatar.UI.Slider;
 using CustomAvatar.Zenject;
 using CustomAvatar.Zenject.Internal;
 using HarmonyLib;
 using IPA;
+using UnityEngine.XR;
 using Logger = IPA.Logging.Logger;
 
 namespace CustomAvatar
@@ -31,7 +33,7 @@ namespace CustomAvatar
     [Plugin(RuntimeOptions.DynamicInit)]
     internal class Plugin
     {
-        private readonly Harmony _harmony = new Harmony("com.nicoco007.beatsabercustomavatars");
+        private readonly Harmony _harmony = new("com.nicoco007.beatsabercustomavatars");
 
         [Init]
         public Plugin(Logger ipaLogger)
@@ -53,7 +55,27 @@ namespace CustomAvatar
 
             ZenjectHelper.AddComponentAlongsideExisting<MainCamera, CustomAvatarsMainCameraController>();
             ZenjectHelper.AddComponentAlongsideExisting<SmoothCamera, CustomAvatarsSmoothCameraController>();
-            ZenjectHelper.AddComponentAlongsideExisting<VRCenterAdjust, AvatarCenterAdjust>(null, go => go.name == "Origin" && go.scene.name != "Tutorial"); // don't add on tutorial - temporary fix to avoid Counters+ disabling the avatar
+
+            ZenjectHelper.AddComponentAlongsideExisting<VRCenterAdjust, TransformVariableSetter>(condition: go => go.name == "Origin", setupFunction: (c, tn) => tn.transformVariable = c.Resolve<TransformVariableManager>().origin);
+            ZenjectHelper.AddComponentAlongsideExisting<MainCamera, TransformVariableSetter>(setupFunction: (c, tn) => tn.transformVariable = c.Resolve<TransformVariableManager>().head);
+            ZenjectHelper.AddComponentAlongsideExisting<VRController, TransformVariableSetter>(setupFunction: (c, tn) =>
+            {
+                XRNode node = tn.GetComponent<VRController>().node;
+                TransformVariableManager transformVariableManager = c.Resolve<TransformVariableManager>();
+
+                switch (node)
+                {
+                    case XRNode.LeftHand:
+                        tn.transformVariable = transformVariableManager.leftHand;
+                        return;
+
+                    case XRNode.RightHand:
+                        tn.transformVariable = transformVariableManager.rightHand;
+                        return;
+                }
+
+                throw new InvalidOperationException($"Unexpected XR Node {node} for {nameof(VRController)} '{tn.name}'");
+            });
 
             ZenjectHelper.AddComponentAlongsideExisting<BloomFogEnvironment, EnvironmentObject>();
             ZenjectHelper.AddComponentAlongsideExisting<MenuEnvironmentManager, EnvironmentObject>();

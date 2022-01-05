@@ -84,14 +84,10 @@ namespace CustomAvatar.Zenject
 
             Container.Bind<AvatarLoader>().AsSingle();
             Container.Bind<AvatarSpawner>().AsSingle();
-            Container.BindInterfacesAndSelfTo<VRPlayerInput>().AsSingle();
-            Container.Bind(typeof(VRPlayerInputInternal), typeof(IInitializable), typeof(IDisposable)).To<VRPlayerInputInternal>().AsSingle();
+            Container.Bind(typeof(VRPlayerInput), typeof(IInitializable), typeof(IDisposable)).To<VRPlayerInput>().AsSingle();
             Container.BindInterfacesAndSelfTo<LightingQualityController>().AsSingle();
             Container.BindInterfacesAndSelfTo<BeatSaberUtilities>().AsSingle();
-
-#pragma warning disable CS0612
-            Container.BindInterfacesAndSelfTo<FloorController>().AsSingle();
-#pragma warning restore CS0612
+            Container.Bind<TransformVariableManager>().AsSingle();
 
             // helper classes
             Container.Bind<MirrorHelper>().AsTransient();
@@ -99,15 +95,14 @@ namespace CustomAvatar.Zenject
             Container.Bind<TrackingHelper>().AsTransient();
 
             Container.Bind<MainSettingsModelSO>().FromInstance(_pcAppInit.GetField<MainSettingsModelSO, PCAppInit>("_mainSettingsModel")).IfNotBound();
+
+            Container.Bind<PlayerSpaceController>().FromNewComponentOnNewGameObject("Player Space");
         }
 
         private object CreateLogger(InjectContext context)
         {
             Type genericType = context.MemberType.GenericTypeArguments[0];
-
-            return genericType.IsAssignableFrom(context.ObjectType)
-                ? Activator.CreateInstance(typeof(IPALogger<>).MakeGenericType(genericType), _ipaLogger)
-                : throw new InvalidOperationException($"Cannot create logger with generic type '{genericType}' for type '{context.ObjectType}'");
+            return Activator.CreateInstance(typeof(IPALogger<>).MakeGenericType(genericType), _ipaLogger);
         }
 
         private Settings LoadSettings()

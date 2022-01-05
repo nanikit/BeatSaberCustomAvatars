@@ -87,7 +87,7 @@ namespace CustomAvatar
         public void Start()
         {
             var ikHelper = new IKHelper(new UnityDebugLogger<IKHelper>());
-            ikHelper.InitializeVRIK(transform.GetComponentInChildren<VRIKManager>(), transform);
+            ikHelper.InitializeVRIK(transform.GetComponentInChildren<VRIKManager>(), gameObject);
         }
 
         internal void OnDrawGizmos()
