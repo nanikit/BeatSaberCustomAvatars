@@ -19,6 +19,7 @@ using CustomAvatar.HarmonyPatches;
 using CustomAvatar.Tracking;
 using System;
 using UnityEngine;
+using UnityEngine.XR;
 using Zenject;
 
 namespace CustomAvatar.Utilities
@@ -27,8 +28,6 @@ namespace CustomAvatar.Utilities
     {
         public static readonly float kDefaultPlayerEyeHeight = MainSettingsModelSO.kDefaultPlayerHeight - MainSettingsModelSO.kHeadPosToPlayerHeightOffset;
         public static readonly float kDefaultPlayerArmSpan = MainSettingsModelSO.kDefaultPlayerHeight;
-
-        private static readonly Func<OpenVRHelper, OpenVRHelper.VRControllerManufacturerName> kVrControllerManufacturerNameGetter = ReflectionExtensions.CreatePrivatePropertyGetter<OpenVRHelper, OpenVRHelper.VRControllerManufacturerName>("vrControllerManufacturerName");
 
         public Vector3 roomCenter => _mainSettingsModel.roomCenter;
         public Quaternion roomRotation => Quaternion.Euler(0, _mainSettingsModel.roomRotation, 0);
@@ -42,6 +41,7 @@ namespace CustomAvatar.Utilities
         private readonly PlayerDataModel _playerDataModel;
         private readonly Settings _settings;
         private readonly IVRPlatformHelper _vrPlatformHelper;
+        private readonly Transform _transform = new GameObject().transform;
 
         internal BeatSaberUtilities(MainSettingsModelSO mainSettingsModel, PlayerDataModel playerDataModel, Settings settings, IVRPlatformHelper vrPlatformHelper)
         {
@@ -81,44 +81,24 @@ namespace CustomAvatar.Utilities
         }
 
         /// <summary>
-        /// Similar to the various implementations of <see cref="IVRPlatformHelper.AdjustControllerTransform(UnityEngine.XR.XRNode, Transform, Vector3, Vector3)"/> except it updates a pose instead of adjusting a transform.
+        /// Similar to the various implementations of <see cref="IVRPlatformHelper.AdjustControllerTransform(XRNode, Transform, Vector3, Vector3)"/> except it updates a pose instead of adjusting a transform.
         /// </summary>
         public void AdjustPlatformSpecificControllerPose(DeviceUse use, ref Pose pose)
         {
             if (use != DeviceUse.LeftHand && use != DeviceUse.RightHand) return;
 
-            Vector3 position = _mainSettingsModel.controllerPosition;
-            Vector3 rotation = _mainSettingsModel.controllerRotation;
+            XRNode node = use == DeviceUse.LeftHand ? XRNode.LeftHand : XRNode.RightHand;
+            _transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            _vrPlatformHelper.AdjustControllerTransform(node, _transform, Vector3.zero, Vector3.zero);
 
-            if (_vrPlatformHelper is OculusVRHelper)
-            {
-                rotation += new Vector3(-40f, 0f, 0f);
-                position += new Vector3(0f, 0f, 0.055f);
-            }
-            else if (_vrPlatformHelper is OpenVRHelper openVRHelper)
-            {
-                if (kVrControllerManufacturerNameGetter(openVRHelper) == OpenVRHelper.VRControllerManufacturerName.Valve)
-                {
-                    rotation += new Vector3(-16.3f, 0f, 0f);
-                    position += new Vector3(0f, 0.022f, -0.01f);
-                }
-                else
-                {
-                    rotation += new Vector3(-4.3f, 0f, 0f);
-                    position += new Vector3(0f, -0.008f, 0f);
-                }
-            }
-
-            // mirror across YZ plane for left hand
+            Quaternion rotation = _transform.rotation;
+            Vector3 position = _transform.position;
             if (use == DeviceUse.LeftHand)
             {
-                rotation.y = -rotation.y;
-                rotation.z = -rotation.z;
-
-                position.x = -position.x;
+                rotation = Quaternion.Euler(rotation.x, -rotation.y, -rotation.z);
+                position = new Vector3(-position.x, position.y, position.z);
             }
-
-            pose.rotation *= Quaternion.Euler(rotation);
+            pose.rotation *= rotation;
             pose.position += pose.rotation * position;
         }
 
